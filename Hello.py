@@ -49,24 +49,24 @@ def process_data(df_proyectos, df_operaciones, df_operaciones_desembolsos):
 
     merged_df = pd.merge(df_operaciones_desembolsos, df_operaciones, on='NoOperacion', how='left')
     merged_df = pd.merge(merged_df, df_proyectos, on='NoProyecto', how='left')
-    st.write(merged_df)
-
-    # Convierte las columnas 'FechaEfectiva' y 'FechaVigencia' al formato correcto
-    merged_df['FechaEfectiva'] = pd.to_datetime(merged_df['FechaEfectiva'], format='%d/%m/%y', errors='coerce')
-    merged_df['FechaVigencia'] = pd.to_datetime(merged_df['FechaVigencia'], format='%d/%m/%y', errors='coerce')
     
 
+    # Convierte las columnas 'FechaEfectiva' y 'FechaVigencia' al formato correcto
+    merged_df['FechaEfectiva'] = pd.to_datetime(merged_df['FechaEfectiva'], dayfirst=True, errors='coerce')
+    merged_df['FechaVigencia'] = pd.to_datetime(merged_df['FechaVigencia'], dayfirst=True, errors='coerce')
+
     # Calculate the difference in years as a float first
-    merged_df['Ano'] = ((merged_df['FechaEfectiva'] - merged_df['FechaVigencia']).dt.days / 365)
+    merged_df['Ano'] = ((merged_df['FechaEfectiva'] - merged_df['FechaVigencia']).dt.days / 365).fillna(-1)
 
-    # Replace NaN values with a default value (e.g., -1) or you can choose to drop these rows
-    merged_df['Ano'] = merged_df['Ano'].fillna(-1)
+    # Filter to exclude rows where 'Ano' is negative
+    filtered_df = merged_df[merged_df['Ano'] >= 0]
 
-    # Now convert the 'Ano' column to integer
-    merged_df['Ano'] = merged_df['Ano'].astype(int)
-    filtered_df = merged_df[merged_df['Ano'] != -1]
+    # Convert 'Ano' to integer
+    filtered_df['Ano'] = filtered_df['Ano'].astype(int)
 
+    # Write the filtered dataframe to the Streamlit app
     st.write(filtered_df)
+
 
     result_df = merged_df.groupby(['IDEtapa', 'Ano', 'IDDesembolso', 'AporteFONPLATAVigente'])['Monto'].sum().reset_index()
     result_df['Monto Acumulado'] = result_df.groupby(['IDEtapa'])['Monto'].cumsum().reset_index(drop=True)
